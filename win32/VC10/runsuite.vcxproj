@@ -1,0 +1,703 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+    ============================================================================
+    Name:               /libxml2-2.9.9/win32/VC10/runsuite.vcxproj
+
+    Goal:               Define Microsoft MSBuild and Visual Studio configuration
+                        to build runsuite for the Win32, x64, ARM, and ARM64
+                        platforms.
+
+    Remarks:            Although this file has been extensively hand-edited, and
+                        some elements, such as the AfterBuild target and the
+                        TestSubjectDLL element on which it relies, are hidden
+                        from the Microsoft Visual Studio editors, everything
+                        works correctly when the project is built within Visual
+                        Studio. Should the need arise to use the Visual Studio
+                        property sheet forms to edit these settings, the hidden
+                        bits are preserved, though redundant white space is
+                        removed.
+
+    ============================================================================
+    Revision History
+    ============================================================================
+
+    Date       By Remark
+    ========== == ==============================================================
+    2019/03/30 DG Add an AfterBuild step to copy the Visual C runtime library
+                  for the correct platform into the output directory, and extend
+                  to cover the x64, ARM, and ARM64 platforms.
+
+    2019/03/31 DG Extend to cover the ARM platform.
+    ============================================================================
+-->
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|ARM">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|ARM64">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM">
+      <Configuration>Release</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM64">
+      <Configuration>Release</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{D841B4F7-C277-49CB-B379-8B1801C8EE35}</ProjectGuid>
+    <RootNamespace>runsuite</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
+    <!-- The TargetExt property is derived from this value. DynamicLibrary maps
+         to .dll, while Application maps to .exe, and StaticLibrary maps to .lib,
+         where all three have a leading dot.
+    -->
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <!-- Setting CharacterSet adds both UNICODE for the Win32 API, and _UNICODE
+         for the CRT API, to the preprocessor symbols list.
+    -->
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
+    <!-- The TargetExt property is derived from this value. DynamicLibrary maps
+         to .dll, while Application maps to .exe, and StaticLibrary maps to .lib,
+         where all three have a leading dot.
+    -->
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <!-- Setting CharacterSet adds both UNICODE for the Win32 API, and _UNICODE
+         for the CRT API, to the preprocessor symbols list.
+    -->
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <OutDir>$(ProjectDir)..\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)$(Platform)\$(ProjectName)_$(Configuration)\</IntDir>
+    <TargetName>$(ProjectName)$(PlatformArchitecture)</TargetName>
+  </PropertyGroup>
+  <!--
+    ============================================================================
+    2019/03/11 - DAG - If my reading of "ARM Intrinsics" is correct, it may be
+                       that the Visual C++ cross compiler for ARM processors
+                       emits NEON instructions by default. That being the case,
+                       this project configuration file explicitly enables SSE2
+                       instructions when the platform is Win32 (x86) or Win64
+                       (x64), and is silent in that regard when the target is
+                       either ARM (ARM32) or ARM64.
+
+    Reference:  "ARM Intrinsics"
+                https://docs.microsoft.com/en-us/cpp/intrinsics/arm-intrinsics?view=vs-2017
+
+    2019/03/22 - DAG - It appears that AdvancedVectorExtensions2 is equivalent
+                       to StreamingSIMDExtensions2 for the x64 platform. For all
+                       other platforms, both are disabled.
+
+                       After further experimentation, I'm leaving the decision
+                       to the compiler, since it appears that the default is to
+                       use them if available.
+    ============================================================================
+  -->
+  <!--
+    ============================================================================
+    2019/03/13 - DAG - This item group feeds the AfterBuild target overrride,
+                       which appears last, since the task it overrides must
+                       first be imported.
+
+                       $(SolutionDir) & $(ProjectDir) have terminal backslashes.
+
+    IMPORTANT: Using $(SolutionDir) prevents the project being built by invoking
+               MSBuild via a command prompt, because the $(SolutionDir) is equal
+               to $(ProjectDir), while the two usually differ when the build is
+               performed by Visual Studio.
+    ============================================================================
+  -->
+  <ItemGroup>
+    <TestSubjectDLL Include="$(ProjectDir)vcruntime140\$(Platform)\vcruntime140.dll;$(ProjectDir)LIB\libiconv$(PlatformArchitecture).dll;$(ProjectDir)LIB\libiconv$(PlatformArchitecture).pdb;$(ProjectDir)LIB\zlibvc$(PlatformArchitecture).dll;$(ProjectDir)LIB\zlibvc$(PlatformArchitecture).pdb;$(ProjectDir)LIB\liblzma$(PlatformArchitecture).dll;$(ProjectDir)LIB\liblzma$(PlatformArchitecture).pdb;$(ProjectDir)LIB\CrtTime$(PlatformArchitecture).dll;$(ProjectDir)LIB\CrtTime$(PlatformArchitecture).pdb;$(ProjectDir)LIB\NativeConssoleAppAids$(PlatformArchitecture).dll;$(ProjectDir)LIB\NativeConssoleAppAids$(PlatformArchitecture).pdb" />
+  </ItemGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <FloatingPointExceptions>true</FloatingPointExceptions>
+      <!-- ZLIB_WINAPI appears in the CPP declarations of both the library and
+           unit test build scripts.
+      -->
+      <AdditionalIncludeDirectories>$(ProjectDir)INCLUDE;$(ProjectDir);$(ProjectDir)..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>BUILD_ENV_IS_VISUAL_STUDIO;PLATFORM_IS_$(Platform);BUILDING_LIBICONV;ZLIB_WINAPI;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- The following keys have the same values for all configurations and
+           platforms.
+      -->
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BrowseInformation>
+      </BrowseInformation>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <!-- The ExceptionHandling key covers C++ exceptions. For pure C code, its
+           value is moot. Since they can arise anywhere, FloatingPointExceptions
+           are always a possibility. Alas, the ARM platform eats them.
+      -->
+      <ExceptionHandling>
+      </ExceptionHandling>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <ProgramDataBaseFileName>$(OutDir)</ProgramDataBaseFileName>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>BUILD_ENV_IS_VISUAL_STUDIO;PLATFORM_IS_$(Platform);NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- The following keys have the same values for all configurations and
+           platforms.
+      -->
+      <Culture>0x0409</Culture>
+      <NullTerminateStrings>true</NullTerminateStrings>
+      <ShowProgress>true</ShowProgress>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+    </ResourceCompile>
+    <Link>
+      <ImageHasSafeExceptionHandlers>true</ImageHasSafeExceptionHandlers>
+      <TargetMachine>MachineX86</TargetMachine>
+      <!-- The following keys have the same values for all configurations and
+           platforms.
+      -->
+      <AdditionalOptions>$(AdditionalOptions)</AdditionalOptions>
+      <AdditionalLibraryDirectories>$(ProjectDir)LIB\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libxml2$(PlatformArchitecture).lib;CrtTime$(PlatformArchitecture).lib;NativeConssoleAppAids$(PlatformArchitecture).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DataExecutionPrevention>true</DataExecutionPrevention>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+      <GenerateMapFile>true</GenerateMapFile>
+      <ImportLibrary>$(OutDir)libxmlwapi.lib</ImportLibrary>
+      <OptimizeReferences>false</OptimizeReferences>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <ProgramDatabaseFile>$(OutDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <MapFileName>$(OutDir)$(TargetName).map</MapFileName>
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+      <TerminalServerAware>true</TerminalServerAware>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <FloatingPointExceptions>false</FloatingPointExceptions>
+      <!-- ZLIB_WINAPI appears in the CPP declarations of both the library and
+           unit test build scripts.
+      -->
+      <AdditionalIncludeDirectories>$(ProjectDir)INCLUDE;$(ProjectDir);$(ProjectDir)..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>BUILD_ENV_IS_VISUAL_STUDIO;PLATFORM_IS_$(Platform);BUILDING_LIBICONV;ZLIB_WINAPI;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- The following keys have the same values for all configurations and
+           platforms.
+      -->
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BrowseInformation>
+      </BrowseInformation>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <!-- The ExceptionHandling key covers C++ exceptions. For pure C code, its
+           value is moot. Since they can arise anywhere, FloatingPointExceptions
+           are always a possibility. Alas, the ARM platform eats them.
+      -->
+      <ExceptionHandling>
+      </ExceptionHandling>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <ProgramDataBaseFileName>$(OutDir)</ProgramDataBaseFileName>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>BUILD_ENV_IS_VISUAL_STUDIO;PLATFORM_IS_$(Platform);NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+      <NullTerminateStrings>true</NullTerminateStrings>
+      <ShowProgress>true</ShowProgress>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+    </ResourceCompile>
+    <Link>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <!-- The following keys have the same values for all configurations and
+           platforms.
+      -->
+      <AdditionalOptions>$(AdditionalOptions)</AdditionalOptions>
+      <AdditionalLibraryDirectories>$(ProjectDir)LIB\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libxml2$(PlatformArchitecture).lib;CrtTime$(PlatformArchitecture).lib;NativeConssoleAppAids$(PlatformArchitecture).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DataExecutionPrevention>true</DataExecutionPrevention>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+      <GenerateMapFile>true</GenerateMapFile>
+      <ImportLibrary>$(OutDir)libxmlwapi.lib</ImportLibrary>
+      <OptimizeReferences>false</OptimizeReferences>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <ProgramDatabaseFile>$(OutDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <MapFileName>$(OutDir)$(TargetName).map</MapFileName>
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+      <TerminalServerAware>true</TerminalServerAware>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <FloatingPointExceptions>false</FloatingPointExceptions>
+      <AdditionalIncludeDirectories>$(ProjectDir)INCLUDE;$(ProjectDir);$(ProjectDir)..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>BUILD_ENV_IS_VISUAL_STUDIO;PLATFORM_IS_$(Platform);BUILDING_LIBICONV;ZLIB_WINAPI;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BrowseInformation>
+      </BrowseInformation>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <ExceptionHandling>
+      </ExceptionHandling>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <ProgramDataBaseFileName>$(OutDir)</ProgramDataBaseFileName>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>BUILD_ENV_IS_VISUAL_STUDIO;PLATFORM_IS_$(Platform);NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+      <NullTerminateStrings>true</NullTerminateStrings>
+      <ShowProgress>true</ShowProgress>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+    </ResourceCompile>
+    <Link>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <AdditionalOptions>$(AdditionalOptions)</AdditionalOptions>
+      <AdditionalLibraryDirectories>$(ProjectDir)LIB\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libxml2$(PlatformArchitecture).lib;CrtTime$(PlatformArchitecture).lib;NativeConssoleAppAids$(PlatformArchitecture).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DataExecutionPrevention>true</DataExecutionPrevention>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+      <GenerateMapFile>true</GenerateMapFile>
+      <ImportLibrary>$(OutDir)libxmlwapi.lib</ImportLibrary>
+      <OptimizeReferences>false</OptimizeReferences>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <ProgramDatabaseFile>$(OutDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <MapFileName>$(OutDir)$(TargetName).map</MapFileName>
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+      <TerminalServerAware>true</TerminalServerAware>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <FloatingPointExceptions>false</FloatingPointExceptions>
+      <AdditionalIncludeDirectories>$(ProjectDir)INCLUDE;$(ProjectDir);$(ProjectDir)..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>BUILD_ENV_IS_VISUAL_STUDIO;PLATFORM_IS_$(Platform);BUILDING_LIBICONV;ZLIB_WINAPI;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BrowseInformation>
+      </BrowseInformation>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <ExceptionHandling>
+      </ExceptionHandling>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <ProgramDataBaseFileName>$(OutDir)</ProgramDataBaseFileName>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>BUILD_ENV_IS_VISUAL_STUDIO;PLATFORM_IS_$(Platform);NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+      <NullTerminateStrings>true</NullTerminateStrings>
+      <ShowProgress>true</ShowProgress>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+    </ResourceCompile>
+    <Link>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <AdditionalOptions>$(AdditionalOptions)</AdditionalOptions>
+      <AdditionalLibraryDirectories>$(ProjectDir)LIB\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libxml2$(PlatformArchitecture).lib;CrtTime$(PlatformArchitecture).lib;NativeConssoleAppAids$(PlatformArchitecture).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DataExecutionPrevention>true</DataExecutionPrevention>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+      <GenerateMapFile>true</GenerateMapFile>
+      <ImportLibrary>$(OutDir)libxmlwapi.lib</ImportLibrary>
+      <OptimizeReferences>false</OptimizeReferences>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <ProgramDatabaseFile>$(OutDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <MapFileName>$(OutDir)$(TargetName).map</MapFileName>
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+      <TerminalServerAware>true</TerminalServerAware>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FloatingPointExceptions>true</FloatingPointExceptions>
+      <!-- ZLIB_WINAPI appears in the CPP declarations of both the library and
+           unit test build scripts.
+      -->
+      <AdditionalIncludeDirectories>$(ProjectDir)INCLUDE;$(ProjectDir);$(ProjectDir)..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>BUILD_ENV_IS_VISUAL_STUDIO;PLATFORM_IS_$(Platform);BUILDING_LIBICONV;ZLIB_WINAPI;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- The following keys have the same values for all configurations and
+           platforms.
+      -->
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BrowseInformation>
+      </BrowseInformation>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <!-- The ExceptionHandling key covers C++ exceptions. For pure C code, its
+           value is moot. Since they can arise anywhere, FloatingPointExceptions
+           are always a possibility. Alas, the ARM platform eats them.
+      -->
+      <ExceptionHandling>
+      </ExceptionHandling>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <ProgramDataBaseFileName>$(OutDir)</ProgramDataBaseFileName>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>BUILD_ENV_IS_VISUAL_STUDIO;PLATFORM_IS_$(Platform);NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- The following keys have the same values for all configurations and
+           platforms.
+      -->
+      <Culture>0x0409</Culture>
+      <NullTerminateStrings>true</NullTerminateStrings>
+      <ShowProgress>true</ShowProgress>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+    </ResourceCompile>
+    <Link>
+      <ImageHasSafeExceptionHandlers>true</ImageHasSafeExceptionHandlers>
+      <TargetMachine>MachineX86</TargetMachine>
+      <!-- The following keys have the same values for all configurations and
+           platforms.
+      -->
+      <AdditionalOptions>$(AdditionalOptions)</AdditionalOptions>
+      <AdditionalLibraryDirectories>$(ProjectDir)LIB\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libxml2$(PlatformArchitecture).lib;CrtTime$(PlatformArchitecture).lib;NativeConssoleAppAids$(PlatformArchitecture).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DataExecutionPrevention>true</DataExecutionPrevention>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+      <GenerateMapFile>true</GenerateMapFile>
+      <ImportLibrary>$(OutDir)libxmlwapi.lib</ImportLibrary>
+      <OptimizeReferences>false</OptimizeReferences>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <ProgramDatabaseFile>$(OutDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <MapFileName>$(OutDir)$(TargetName).map</MapFileName>
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+      <TerminalServerAware>true</TerminalServerAware>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FloatingPointExceptions>false</FloatingPointExceptions>
+      <!-- ZLIB_WINAPI appears in the CPP declarations of both the library and
+           unit test build scripts.
+      -->
+      <AdditionalIncludeDirectories>$(ProjectDir)INCLUDE;$(ProjectDir);$(ProjectDir)..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>BUILD_ENV_IS_VISUAL_STUDIO;PLATFORM_IS_$(Platform);BUILDING_LIBICONV;ZLIB_WINAPI;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- The following keys have the same values for all configurations and
+           platforms.
+      -->
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BrowseInformation>
+      </BrowseInformation>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <!-- The ExceptionHandling key covers C++ exceptions. For pure C code, its
+           value is moot. Since they can arise anywhere, FloatingPointExceptions
+           are always a possibility. Alas, the ARM platform eats them.
+      -->
+      <ExceptionHandling>
+      </ExceptionHandling>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <ProgramDataBaseFileName>$(OutDir)</ProgramDataBaseFileName>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>BUILD_ENV_IS_VISUAL_STUDIO;PLATFORM_IS_$(Platform);NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+      <NullTerminateStrings>true</NullTerminateStrings>
+      <ShowProgress>true</ShowProgress>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+    </ResourceCompile>
+    <Link>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <!-- The following keys have the same values for all configurations and
+           platforms.
+      -->
+      <AdditionalOptions>$(AdditionalOptions)</AdditionalOptions>
+      <AdditionalLibraryDirectories>$(ProjectDir)LIB\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libxml2$(PlatformArchitecture).lib;CrtTime$(PlatformArchitecture).lib;NativeConssoleAppAids$(PlatformArchitecture).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DataExecutionPrevention>true</DataExecutionPrevention>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+      <GenerateMapFile>true</GenerateMapFile>
+      <ImportLibrary>$(OutDir)libxmlwapi.lib</ImportLibrary>
+      <OptimizeReferences>false</OptimizeReferences>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <ProgramDatabaseFile>$(OutDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <MapFileName>$(OutDir)$(TargetName).map</MapFileName>
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+      <TerminalServerAware>true</TerminalServerAware>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FloatingPointExceptions>false</FloatingPointExceptions>
+      <AdditionalIncludeDirectories>$(ProjectDir)INCLUDE;$(ProjectDir);$(ProjectDir)..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>BUILD_ENV_IS_VISUAL_STUDIO;PLATFORM_IS_$(Platform);BUILDING_LIBICONV;ZLIB_WINAPI;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BrowseInformation>
+      </BrowseInformation>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <ExceptionHandling>
+      </ExceptionHandling>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <ProgramDataBaseFileName>$(OutDir)</ProgramDataBaseFileName>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>BUILD_ENV_IS_VISUAL_STUDIO;PLATFORM_IS_$(Platform);NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+      <NullTerminateStrings>true</NullTerminateStrings>
+      <ShowProgress>true</ShowProgress>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+    </ResourceCompile>
+    <Link>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <AdditionalOptions>$(AdditionalOptions)</AdditionalOptions>
+      <AdditionalLibraryDirectories>$(ProjectDir)LIB\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libxml2$(PlatformArchitecture).lib;CrtTime$(PlatformArchitecture).lib;NativeConssoleAppAids$(PlatformArchitecture).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DataExecutionPrevention>true</DataExecutionPrevention>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+      <GenerateMapFile>true</GenerateMapFile>
+      <ImportLibrary>$(OutDir)libxmlwapi.lib</ImportLibrary>
+      <OptimizeReferences>false</OptimizeReferences>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <ProgramDatabaseFile>$(OutDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <MapFileName>$(OutDir)$(TargetName).map</MapFileName>
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+      <TerminalServerAware>true</TerminalServerAware>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FloatingPointExceptions>false</FloatingPointExceptions>
+      <AdditionalIncludeDirectories>$(ProjectDir)INCLUDE;$(ProjectDir);$(ProjectDir)..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>BUILD_ENV_IS_VISUAL_STUDIO;PLATFORM_IS_$(Platform);BUILDING_LIBICONV;ZLIB_WINAPI;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BrowseInformation>
+      </BrowseInformation>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <ExceptionHandling>
+      </ExceptionHandling>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <ProgramDataBaseFileName>$(OutDir)</ProgramDataBaseFileName>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>BUILD_ENV_IS_VISUAL_STUDIO;PLATFORM_IS_$(Platform);NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+      <NullTerminateStrings>true</NullTerminateStrings>
+      <ShowProgress>true</ShowProgress>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+    </ResourceCompile>
+    <Link>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <AdditionalOptions>$(AdditionalOptions)</AdditionalOptions>
+      <AdditionalLibraryDirectories>$(ProjectDir)LIB\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libxml2$(PlatformArchitecture).lib;CrtTime$(PlatformArchitecture).lib;NativeConssoleAppAids$(PlatformArchitecture).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DataExecutionPrevention>true</DataExecutionPrevention>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+      <GenerateMapFile>true</GenerateMapFile>
+      <ImportLibrary>$(OutDir)libxmlwapi.lib</ImportLibrary>
+      <OptimizeReferences>false</OptimizeReferences>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <ProgramDatabaseFile>$(OutDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <MapFileName>$(OutDir)$(TargetName).map</MapFileName>
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+      <TerminalServerAware>true</TerminalServerAware>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\runsuite.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include=".\INCLUDE\CRTTime.H" />
+    <ClInclude Include=".\INCLUDE\NativeConssoleAppAids.h" />
+    <ClInclude Include="..\..\libxml.h" />
+    <ClInclude Include=".\resource.h" />
+    <ClInclude Include=".\rcVersion.h" />
+    <ClInclude Include=".\runsuiteVersion.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include=".\runsuite.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- 2019/03/28 - DAG - Since I installed the missing library into an
+                            independent solution, I removed the iconv project as
+                            a dependency reference. The AdditionalDependencies
+                            points to it, as it does with other dependencies. I
+                            left the reference as a comment so that anyone who
+                            is familiar with other distributions, including the
+                            master from which this one is derived, are on notice
+                            that I accounted for it separately.
+    -->
+    <!-- <ProjectReference Include="..\..\..\libiconv-1.14.vc10\windows\VC10\iconv.vcxproj">
+      <Project>{bec03130-a64c-48f8-863c-52da83cfb3ae}</Project>
+    </ProjectReference> -->
+    <ProjectReference Include="libxml2.vcxproj">
+      <Project>{1d6039f6-5078-416f-a3af-a36efc7e6a1c}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+  <!--
+    ============================================================================
+    2019/03/05 - DAG - The TestSubjectDLL property is set in the last of two
+                       unlabeled ItemGroup nodes at the top of the project file.
+                       Since this task overrides the definition of an empty
+                       imported target, it must follow the import. To be on the
+                       safe side, it is defined dead last.
+
+    2019/03/14 - DAG - To find other empty targets such as these two that you
+                       can redefine (override) to do tuff, look for the
+                       following string at the beginning of an XML comment.
+
+                       Redefine this target in your project
+
+                       The BeforeBuildGenerateSources target is ideal for
+                       displaying MSBuild property values.
+    ============================================================================
+  -->
+  <Target Name="BeforeBuildGenerateSources">
+    <Message Text="SolutionDir            = $(SolutionDir)" />
+    <Message Text="ProjectDir             = $(ProjectDir)" />
+    <Message Text="ProjectName            = $(ProjectName)" />
+    <Message Text="TargetName             = $(TargetName)" />
+    <Message Text="TargetExt              = $(TargetExt)" />
+    <Message Text="ProjectExt             = $(ProjectExt)" />
+    <Message Text="Platform               = $(Platform)" />
+    <Message Text="PlatformArchitecture   = $(PlatformArchitecture)" />
+    <Message Text="Configuration          = $(Configuration)" />
+    <Message Text="OutDir                 = $(OutDir)" />
+    <Message Text="IntDir                 = $(IntDir)" />
+  </Target>
+  <Target Name="AfterBuild">
+    <Copy SourceFiles="@(TestSubjectDLL)" DestinationFolder="$(OutDir)" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
+  </Target>
+</Project>
