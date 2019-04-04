@@ -2,7 +2,7 @@
 
 __Current Version:__ 2.9.9.0
 
-__Release Date:__ Sunday, 31 March 2019
+__Release Date:__ Thursday, 04 April 2019
 
 The purpose of this repository is to publish a port of the famous ZLib (zlib,
 for purists - you know who you are) library for creating Zip archives and
@@ -11,11 +11,12 @@ Qualcomm Snapdragon series, such as the one inside the Asus ASUS NovaGo TP370QL,
 about which you can learn more at
 <https://www.asus.com/us/2-in-1-PCs/ASUS-NovaGo-TP370QL/>.
 
-This code builds on the latest version of iconv published on the official site,
-at <https://www.gnu.org/software/libiconv/>, adding a configuration for ARM.
+This code incorporates version 1.15, the latest version, of iconv published on
+the official site, at <https://www.gnu.org/software/libiconv/>, adding 
+configurations for ARM, ARM64, and x64.
 
-For completeness, this repository includes the __Win32__ (32 bit Windows on
-Intel/AMD) binaries.
+For completeness, this repository includes the __Win32__ and x64 (32 and 64 bit
+Windows on Intel/AMD) binaries.
 
 ## Using These Libraries
 
@@ -26,13 +27,9 @@ are differentiated by
 | Configuration Platform ID | Hardware Pletform         | Bits | Suffix |
 |---------------------------|---------------------------|------|--------|
 | Win32                     | Windows on Intel and AMD  |   32 | Win32  |
-| x64 *                     | Windows on Intel and AMD  |   64 | x64    |
+| x64                       | Windows on Intel and AMD  |   64 | x64    |
 | ARM                       | Windows on ARM Processors |   32 | ARM    |
-| ARM64 *                   | Windows on ARM Processors |   64 | ARM64  |
-
-\* Support for the two 64-bit platforms, x64 and ARM64, is as yet unavailable,
-  pending completion of 64-bit versions of the iconv library for character
-  encoding conversions.
+| ARM64                     | Windows on ARM Processors |   64 | ARM64  |
 
 This is the last of four major open source libraries, all of which had to be
 converted and tested before this conversion could be put forward. The following
@@ -56,22 +53,23 @@ of which are published as open source projects.
 | Name                  | Version | Repository URL
 |-----------------------|---------|----------------------------------------------------|
 | CRTTime               | 1,0,0,3 | <https://github.com/txwizard/CRTTime>              |
-| NativeConssoleAppAids | 1,0,0,1 | <https://github.com/txwizard/NativeConsoleAppAids> |
+| NativeConssoleAppAids | 1,0,0,4 | <https://github.com/txwizard/NativeConsoleAppAids> |
 
 Since the headers, link library, and dynamic-link library versions of all
 dependent libraries are incorporated herein, you need not visit any of the
 foregoing repositories to get started with libxml2. Nevertheless, identifying
 them herein is intended to spare others the time spent chasing down the original
-sources from which these four libraries were built.
+sources from which these four libraries were built, should you want to build
+them from source.
 
-Except for __NativeConssoleAppAids__, all repositories incorporate test programs
-that have been built for all supported platforms. When executed, each program
-displays its version number, followed by a message that identifis the platform
-on which it is executing, then the current local and UTC machine time. The
-reason that NativeConssoleAppAids has no unit test program is that it was
-developed alongside __CRTTime__, which uses most of its routines, and the four
-open source library ports, all of which incorporate other routines defined
-therein into their respective unit test programs.
+All repositories incorporate test programs that have been built for all
+supported platforms. When executed, each program displays its version number,
+followed by a message that identifis the platform on which it is executing,
+then the current local and UTC machine time. The NativeConssoleAppAids 
+unit tests are incomplete, because it was developed alongside __CRTTime__,
+which uses most of its routines, and the four open source library ports, all
+of which incorporate other routines defined therein into their respective unit
+test programs.
 
 ## Testing LibXML2
 
@@ -82,8 +80,8 @@ absolute name of the test program, `runsuiteXXX.exe`, where "XXX" is the
 platform ID listed in the first table above, into the Windows Clipboard, then
 open a command prompt in the directory that contains the test directory, paste
 the program name into that window, and hit Enter. Since all required DLLs are in
-the program directory, the program can find and load all of them. In this way, a
-copy of the ARM builds of each program was successfully tested on a working ARM
+the program directory, the program can find and load them. In this way, a copy
+of the ARM build of each program was successfully tested on a working ARM
 computer by copying the output directory onto a flash drive, from which it was
 launched directly. Of course, testing libxml required the test directory to be
 copied along with the program directory.
